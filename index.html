@@ -24,7 +24,7 @@
     <div class="card bg-primary text-white p-3 mb-4">
         <div class="d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-3">
-                <img src="https://github.com/67202302078/covid65-dashboard/blob/main/%E0%B8%AA%E0%B8%AD%E0%B8%9A%E0%B8%9B%E0%B8%8F%E0%B8%B4%E0%B8%9A%E0%B8%B1%E0%B8%95%E0%B8%B7.jpg?raw=true" alt="Student Profile" class="profile-img">
+                <img src="https://github.com/67202302078/covid65-dashboard/blob/main/%E0%B8%AA%E0%B8%AD%E0%B8%9A%E0%B8%9B%E0%B8%8F%E0%B8%B1%E0%B8%9A%E0%B8%B1%E0%B8%95%E0%B8%B7.jpg?raw=true" alt="Student Profile" class="profile-img">
                 <div>
                     <h3 class="mb-0">แดชบอร์ดรายงานสถานการณ์ COVID-19</h3>
                     <p class="mb-0 text-light">รายงานข้อมูลการติดเชื้อระดับพื้นที่และภาพรวม</p>
@@ -144,6 +144,21 @@
     let map, mapLayerGroup;
     let epiChart, sexChart, ageChart, provinceChart;
 
+    function getProvince(d) {
+        return d.province_of_onset || d.province_of_isolation || d.province || d.province_of_reporting || "";
+    }
+
+    function getSex(d) {
+        let s = d.sex || d.gender || "";
+        if (s.includes("ชาย") || s.toLowerCase() === "male") return "ชาย";
+        if (s.includes("หญิง") || s.toLowerCase() === "female") return "หญิง";
+        return "ไม่ระบุ";
+    }
+
+    function getDate(d) {
+        return d.announce_date || d.txn_date || d.date || "";
+    }
+
     function initMap() {
         map = L.map('map').setView([13.7367, 100.5231], 6);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -167,7 +182,7 @@
     }
 
     function populateFilters() {
-        const provinces = [...new Set(rawData.map(item => item.province_of_onset || item.province).filter(Boolean))].sort();
+        const provinces = [...new Set(rawData.map(item => getProvince(item)).filter(Boolean))].sort();
         const select = document.getElementById('filter-province');
         select.innerHTML = '<option value="ALL">-- แสดงทุกจังหวัด --</option>';
         provinces.forEach(p => {
@@ -182,8 +197,8 @@
         const sex = document.getElementById('filter-sex').value;
 
         filteredData = rawData.filter(d => {
-            let p = d.province_of_onset || d.province;
-            let s = d.sex;
+            let p = getProvince(d);
+            let s = getSex(d);
             let matchProv = (prov === 'ALL') || (p === prov);
             let matchSex = (sex === 'ALL') || (s === sex);
             return matchProv && matchSex;
@@ -199,7 +214,7 @@
 
     function updateKPIs() {
         document.getElementById('stat-total').innerText = filteredData.length.toLocaleString();
-        const provs = new Set(filteredData.map(d => d.province_of_onset || d.province).filter(Boolean));
+        const provs = new Set(filteredData.map(d => getProvince(d)).filter(Boolean));
         document.getElementById('stat-provinces').innerText = provs.size;
 
         const ages = filteredData.map(d => parseFloat(d.age)).filter(a => !isNaN(a));
@@ -213,7 +228,7 @@
 
         let countsByProv = {};
         filteredData.forEach(d => {
-            let p = d.province_of_onset || d.province;
+            let p = getProvince(d);
             if (p) countsByProv[p] = (countsByProv[p] || 0) + 1;
         });
 
@@ -241,7 +256,7 @@
     function renderCharts() {
         let dateCounts = {};
         filteredData.forEach(d => {
-            let date = d.announce_date || d.txn_date;
+            let date = getDate(d);
             if (date) dateCounts[date] = (dateCounts[date] || 0) + 1;
         });
 
@@ -256,7 +271,7 @@
 
         let sexCounts = {};
         filteredData.forEach(d => {
-            let s = d.sex || 'ไม่ระบุ';
+            let s = getSex(d);
             sexCounts[s] = (sexCounts[s] || 0) + 1;
         });
 
@@ -282,7 +297,7 @@
 
         let provCounts = {};
         filteredData.forEach(d => {
-            let p = d.province_of_onset || d.province || 'ไม่ระบุ';
+            let p = getProvince(d) || 'ไม่ระบุ';
             provCounts[p] = (provCounts[p] || 0) + 1;
         });
         let sortedProvs = Object.entries(provCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
